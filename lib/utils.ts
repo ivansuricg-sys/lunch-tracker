@@ -47,12 +47,13 @@ export function generateYearCSV(data: YearRow[], anio: number): string {
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
   ];
+  const sep = ';';
   const header = `Registro de almuerzos - ${anio}\n`;
-  const cols = `Nombre,${monthNames.join(',')},Total\n`;
+  const cols = `Nombre${sep}${monthNames.join(sep)}${sep}Total\n`;
   const rows = data.map((p) => {
     const total = p.months.reduce((s, v) => s + v, 0);
-    return `"${p.nombre}",${p.months.join(',')},${total}`;
+    return `"${p.nombre}"${sep}${p.months.join(sep)}${sep}${total}`;
   });
-  // BOM for Excel UTF-8 compatibility
-  return '﻿' + header + cols + rows.join('\n');
+  // BOM for Excel UTF-8 compatibility + sep hint for Spanish/European Excel
+  return `﻿sep=${sep}\n` + header + cols + rows.join('\n');
 }
