@@ -1,7 +1,7 @@
 export type ResumenRow = {
   nombre: string;
   cantidad: number;
-  dias: { fecha: string; created_at: string }[];
+  dias: { id: number; fecha: string; created_at: string }[];
 };
 
 export function formatDateSpanish(dateStr: string): string {

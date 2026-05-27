@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
     const entry = map.get(nombre)!;
     entry.cantidad++;
     entry.dias.push({
+      id: Number(row.id),
       fecha: String(row.fecha),
       created_at: String(row.created_at),
     });
