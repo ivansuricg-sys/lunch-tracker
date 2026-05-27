@@ -2,16 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDB } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
-  const db = await getDB();
-  const all = req.nextUrl.searchParams.get('all') === 'true';
+  try {
+    const db = await getDB();
+    const all = req.nextUrl.searchParams.get('all') === 'true';
 
-  const result = await db.execute(
-    all
-      ? 'SELECT * FROM personas ORDER BY orden ASC, id ASC'
-      : 'SELECT * FROM personas WHERE activo = 1 ORDER BY orden ASC, id ASC'
-  );
+    const result = await db.execute(
+      all
+        ? 'SELECT * FROM personas ORDER BY orden ASC, id ASC'
+        : 'SELECT * FROM personas WHERE activo = 1 ORDER BY orden ASC, id ASC'
+    );
 
-  return NextResponse.json(result.rows);
+    return NextResponse.json(result.rows);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
