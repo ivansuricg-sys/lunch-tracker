@@ -43,3 +43,21 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const db = await getDB();
+  const { id: idStr } = await params;
+  const id = parseInt(idStr, 10);
+
+  if (isNaN(id)) {
+    return NextResponse.json({ error: 'id inválido' }, { status: 400 });
+  }
+
+  await db.execute({ sql: 'DELETE FROM registros WHERE persona_id = ?', args: [id] });
+  await db.execute({ sql: 'DELETE FROM personas WHERE id = ?', args: [id] });
+
+  return NextResponse.json({ ok: true });
+}

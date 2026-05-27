@@ -30,6 +30,8 @@ export default function AdminPage() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [newName, setNewName] = useState('');
   const [loadingResumen, setLoadingResumen] = useState(false);
+  const [editingPersonaId, setEditingPersonaId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
 
   // New registro form
   const [newRegPersonaId, setNewRegPersonaId] = useState('');
@@ -77,20 +79,6 @@ export default function AdminPage() {
   useEffect(() => { if (authed) loadResumen(); }, [authed, loadResumen]);
   useEffect(() => { if (authed) loadPersonas(); }, [authed, loadPersonas]);
 
-  // "Por día" view with registro IDs for deletion
-  const byDia = useMemo(() => {
-    const map = new Map<string, { id: number; nombre: string }[]>();
-    for (const row of resumen) {
-      for (const d of row.dias) {
-        if (!map.has(d.fecha)) map.set(d.fecha, []);
-        map.get(d.fecha)!.push({ id: d.id, nombre: row.nombre });
-      }
-    }
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([fecha, registros]) => ({ fecha, registros }));
-  }, [resumen]);
-
   const handleDeleteRegistro = async (id: number) => {
     await fetch(`/api/registros/${id}`, { method: 'DELETE' });
     loadResumen();
@@ -119,12 +107,12 @@ export default function AdminPage() {
   };
 
   const handleExportCSV = async () => {
-    const res = await fetch(`/api/registros/export?mes=${mes}&anio=${anio}`);
+    const res = await fetch(`/api/registros/export?anio=${anio}`);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `almuerzos-${anio}-${String(mes).padStart(2, '0')}.csv`;
+    a.download = `almuerzos-${anio}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -148,6 +136,35 @@ export default function AdminPage() {
       body: JSON.stringify({ activo: activo === 1 ? 0 : 1 }),
     });
     loadPersonas();
+  };
+
+  const handleStartEdit = (p: Persona) => {
+    setEditingPersonaId(p.id);
+    setEditingName(p.nombre);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPersonaId(null);
+    setEditingName('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPersonaId || !editingName.trim()) return;
+    await fetch(`/api/personas/${editingPersonaId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: editingName.trim() }),
+    });
+    setEditingPersonaId(null);
+    setEditingName('');
+    loadPersonas();
+  };
+
+  const handleDeletePersona = async (id: number, nombre: string) => {
+    if (!confirm(`¿Eliminar a "${nombre}"? Se borrarán todos sus registros.`)) return;
+    await fetch(`/api/personas/${id}`, { method: 'DELETE' });
+    loadPersonas();
+    loadResumen();
   };
 
   const handleLogout = () => {
@@ -271,36 +288,6 @@ export default function AdminPage() {
         )}
       </section>
 
-      {/* Por día con delete */}
-      {byDia.length > 0 && (
-        <section className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-700">Por día</h2>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {byDia.map(({ fecha, registros }) => (
-              <div key={fecha} className="px-4 py-3">
-                <p className="text-sm font-medium text-gray-500 mb-1.5">{fecha}</p>
-                <div className="flex flex-wrap gap-2">
-                  {registros.map(({ id, nombre }) => (
-                    <span key={id} className="inline-flex items-center gap-1 bg-green-50 text-green-800 text-sm px-2 py-0.5 rounded-full">
-                      {nombre}
-                      <button
-                        onClick={() => handleDeleteRegistro(id)}
-                        className="text-red-400 hover:text-red-600 font-bold leading-none ml-0.5"
-                        title="Borrar"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Agregar registro manual */}
       <section className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100">
@@ -343,18 +330,51 @@ export default function AdminPage() {
         </div>
         <div className="divide-y divide-gray-50">
           {personas.map((p) => (
-            <div key={p.id} className="flex items-center justify-between px-4 py-3">
-              <span className={`font-medium ${p.activo ? 'text-gray-800' : 'text-gray-400 line-through'}`}>
-                {p.nombre}
-              </span>
-              <button
-                onClick={() => toggleActivo(p.id, p.activo)}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  p.activo ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'
-                }`}
-              >
-                {p.activo ? 'Desactivar' : 'Activar'}
-              </button>
+            <div key={p.id} className="flex items-center gap-2 px-4 py-3">
+              {editingPersonaId === p.id ? (
+                <>
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') handleCancelEdit(); }}
+                    className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    autoFocus
+                  />
+                  <button onClick={handleSaveEdit} className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    Guardar
+                  </button>
+                  <button onClick={handleCancelEdit} className="px-3 py-1 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                    Cancelar
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className={`flex-1 font-medium ${p.activo ? 'text-gray-800' : 'text-gray-400 line-through'}`}>
+                    {p.nombre}
+                  </span>
+                  <button
+                    onClick={() => handleStartEdit(p)}
+                    className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => toggleActivo(p.id, p.activo)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      p.activo ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'
+                    }`}
+                  >
+                    {p.activo ? 'Desactivar' : 'Activar'}
+                  </button>
+                  <button
+                    onClick={() => handleDeletePersona(p.id, p.nombre)}
+                    className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>

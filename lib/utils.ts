@@ -37,12 +37,22 @@ export function parseTimestamp(ts: string): string {
   return ts;
 }
 
-export function generateCSV(data: ResumenRow[], mes: number, anio: number): string {
-  const header = `Registro de almuerzos - ${getMonthName(mes)} ${anio}\n`;
-  const cols = 'Nombre,Fecha,Hora de registro\n';
-  const rows = data.flatMap((p) =>
-    p.dias.map((d) => `"${p.nombre}","${d.fecha}","${parseTimestamp(d.created_at)}"`)
-  );
+export interface YearRow {
+  nombre: string;
+  months: number[];
+}
+
+export function generateYearCSV(data: YearRow[], anio: number): string {
+  const monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ];
+  const header = `Registro de almuerzos - ${anio}\n`;
+  const cols = `Nombre,${monthNames.join(',')},Total\n`;
+  const rows = data.map((p) => {
+    const total = p.months.reduce((s, v) => s + v, 0);
+    return `"${p.nombre}",${p.months.join(',')},${total}`;
+  });
   // BOM for Excel UTF-8 compatibility
   return '﻿' + header + cols + rows.join('\n');
 }
