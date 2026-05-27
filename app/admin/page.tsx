@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import QRModal from '@/components/QRModal';
+import dynamic from 'next/dynamic';
+const QRModal = dynamic(() => import('@/components/QRModal'), { ssr: false });
 import { getMonthName, parseTimestamp } from '@/lib/utils';
 import type { ResumenRow } from '@/lib/utils';
 
