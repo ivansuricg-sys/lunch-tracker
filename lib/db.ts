@@ -1,11 +1,11 @@
-import { createClient, type Client } from '@libsql/client';
+import { createClient } from '@libsql/client/web';
+type Client = ReturnType<typeof createClient>;
 
 let db: Client | null = null;
 let initialized = false;
 
 export async function getDB(): Promise<Client> {
   if (!db) {
-    // Use https:// for HTTP transport (required in Vercel serverless)
     const url = (process.env.TURSO_DATABASE_URL ?? '').replace('libsql://', 'https://');
     db = createClient({
       url,
