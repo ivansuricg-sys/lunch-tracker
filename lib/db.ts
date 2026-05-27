@@ -5,8 +5,10 @@ let initialized = false;
 
 export async function getDB(): Promise<Client> {
   if (!db) {
+    // Use https:// for HTTP transport (required in Vercel serverless)
+    const url = (process.env.TURSO_DATABASE_URL ?? '').replace('libsql://', 'https://');
     db = createClient({
-      url: process.env.TURSO_DATABASE_URL!,
+      url,
       authToken: process.env.TURSO_AUTH_TOKEN,
     });
   }
