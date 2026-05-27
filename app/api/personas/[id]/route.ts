@@ -3,11 +3,12 @@ import { getDB } from '@/lib/db';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const db = await getDB();
   const body = await req.json();
-  const id = parseInt(params.id, 10);
+  const { id: idStr } = await params;
+  const id = parseInt(idStr, 10);
 
   if (isNaN(id)) {
     return NextResponse.json({ error: 'id inválido' }, { status: 400 });
